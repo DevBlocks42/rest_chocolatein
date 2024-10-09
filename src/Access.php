@@ -66,8 +66,8 @@ class Access extends DatabaseAccess
     {
         switch($table)
         {
-            case "":
-                return [];
+            case "produit_specifique":
+                return $this->selectLike($fields);
             default:
                 return $this->selectTuplesOneTable($table, $fields);
         }
@@ -165,7 +165,8 @@ class Access extends DatabaseAccess
         }
         // construction de la requête
         $query = "update $table set ";
-        foreach ($fields as $key => $value){
+        foreach ($fields as $key => $value)
+        {
             $query .= "$key=:$key,";
         }
         // (enlève la dernière virgule)
@@ -195,5 +196,22 @@ class Access extends DatabaseAccess
         // (enlève le dernier and)
         $query = substr($query, 0, strlen($query)-5);   
         return $this->connection->updateDB($query, $fields);	        
+    }
+    /**
+     * récupère le nom, la description et les détails des produits
+     * dont 'description' ou 'détails' contient le mot clé présent dans $champs
+     * @param array|null $fields contient juste 'clef' avec une valeur de clef
+     * @return ?array
+     */
+    private function selectLike(?array $fields) : ?array
+    {
+        if(empty($fields) || !array_key_exists('clef', $fields))
+        {
+            return null;
+        }
+        $query = "SELECT p.nom, p.description, dp.details FROM produit p LEFT JOIN details_produits dp ON (p.id = dp.idproduit) ";
+        $query .= "WHERE p.description LIKE :clef OR dp.details LIKE :clef ORDER BY p.nom;";
+        $fields['clef'] = '%' . $fields['clef'] . '%'; 
+        return $this->connection->queryDB($query, $fields);
     }
 }
